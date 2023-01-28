@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html>
+    <body>
+        <form id="form">
+            <input type="file" id="fileInput" />
+            <button type="submit">Go</button>
+          </form>
+          <canvas id="canvas"></canvas>
+          <img id="result" src=""/>
+          <div id="myDiv" style="visibility: hidden;">
+        <form id="form_id" action="http://localhost:5000/test" method="post">
+            <input type="text" id="text_to_send" name="text_to_send" value="">
+          </form>
+        </div>
+          <script>
+          const form = document.getElementById('form');
+const fileInput = document.getElementById('fileInput');
+const canvas = document.getElementById('canvas');
+const result = document.getElementById('result');
+
+form.addEventListener('submit', async (event) => {
+  event.preventDefault();
+
+  // Read the image file and draw it on the canvas
+  const file = fileInput.files[0];
+  const image = new Image();
+  image.src = URL.createObjectURL(file);
+  await image.decode();
+  canvas.width = image.width;
+  canvas.height = image.height;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(image, 0, 0);
+
+  // Calculate the size of each grid square based on the original image size
+  const gridSize = 72;
+  const gridWidth = image.width / gridSize;
+  const gridHeight = image.height / gridSize;
+
+  // Define an object that maps color names to RGB values
+  const colorMap = {
+    1: [0, 0, 0], //black
+ 2: [255, 255, 255], //white
+  3: [128, 128, 128], //gray
+4: [255, 192, 203], //pink
+  5: [165, 42, 42], //brown
+ 6: [255, 0, 0], //red
+ 7: [255, 165, 0], //orange
+ 8: [255, 255, 0], //yellow
+  9: [0, 128, 0], //green
+  0: [0, 0, 255], //blue
+  a: [128, 0, 128] //purple
+  };
+
+  // Define an array to store the color names for each grid square
+  const colors = [];
+// Process each grid square
+  for (let y = 0; y < gridSize; y++) {
+    for (let x = 0; x < gridSize; x++) {
+      // Get the pixel data for the current grid square
+      const data = ctx.getImageData(x * gridWidth, y * gridHeight, gridWidth, gridHeight).data;
+
+      // Find the average color of the grid square
+      let r = 0;
+      let g = 0;
+      let b = 0;
+      for (let i = 0; i < data.length; i += 4) {
+        r += data[i];
+        g += data[i + 1];
+        b += data[i + 2];
+      }
+      r = Math.round(r / (data.length / 4));
+      g = Math.round(g / (data.length / 4));
+      b = Math.round(b / (data.length / 4));
+
+      // Find the
+// closest color name for the average color
+      let closestColor = null;
+      let closestDistance = Infinity;
+      for (const [colorName, [r2, g2, b2]] of Object.entries(colorMap)) {
+        const distance = Math.sqrt((r - r2) ** 2 + (g - g2) ** 2 + (b - b2) ** 2);
+        if (distance < closestDistance) {
+          closestColor = colorName;
+          closestDistance = distance;
+        }
+      }
+
+      // Add the closest color name to the array
+      colors.push(closestColor);
+
+      // Fill the grid square with the average color
+      ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+      ctx.fillRect(x * gridWidth, y * gridHeight, gridWidth, gridHeight);
+    }
+  }
+
+  // Create the table element and set its border and background color
+  const table = document.createElement('table');
+  table.style.border = '1px solid black';
+  table.style.backgroundColor = '#eee';
+
+  // Create the table header row
+  const headerRow = document.createElement('tr');
+  headerRow.innerHTML = '<th>Color</th><th>Code</th>';
+  table.appendChild(headerRow);
+
+  // Create a row for each color
+  colors.forEach((color) => {
+    const row = document.createElement('tr');
+    row.innerHTML = `<td style="background-color: ${colorMap[color]};"></td><td>${color}</td>`;
+    table.appendChild(row);
+  });
+
+  // Add the table to the page
+  document.body.appendChild(table);
+
+  // Add a button to export the table
+  const exportButton = document.createElement('button');
+  exportButton.type = 'button';
+  exportButton.textContent = 'Export Table';
+  exportButton.onclick = exportTable;
+
+  document.body.insertBefore(exportButton, table);
+});
+
+function exportTable() {
+    // Get the table data
+    const tableData = [];
+  const rows = document.querySelectorAll('table tr');
+  rows.forEach((row) => {
+    const rowData = [];
+    const cells = row.querySelectorAll('td, th');
+    cells.forEach((cell) => {
+      rowData.push(cell.textContent);
+    });
+    tableData.push(rowData);
+  });
+
+
+  // Convert the table data to a CSV string
+    const csv = tableData.map((row) => row.join(''));
+
+    const s = JSON.stringify(csv)
+            document.getElementById("text_to_send").value = s;
+            document.getElementById("form_id").submit();
+}
+          </script>
+
+
+    </body>
+</html>
